@@ -106,10 +106,16 @@
     const piecesCtx = piecesCanvas.getContext('2d');
 
     const COLS = 9;
-    const ROWS = 10;
+    const ROWS = 9; // 总行数修正为 9
     const SQUARE_SIZE = 60;
     const PIECE_RADIUS = SQUARE_SIZE / 2 - 5;
-    const PADDING = 30;
+    const PADDING = 30; 
+    
+    // --- 新增常用于区域划分的常量 ---
+    const RIVER_Y_MIN = 3;
+    const RED_PALACE_Y_MIN = 6; // 红方九宫从 y=6 开始 (即 y=6, 7, 8)
+    const BOARD_WIDTH = (COLS - 1) * SQUARE_SIZE + 2 * PADDING; // 540
+    const BOARD_HEIGHT = (ROWS - 1) * SQUARE_SIZE + 2 * PADDING; // 540
     
     // **音效替换区：使用 Base64 Data URI**
     // **音效替换区：使用 Web Audio API (纯代码合成)**
@@ -178,11 +184,17 @@
 
     // --- 2. 绘制 ---
     function drawBoard() {
-        boardCtx.clearRect(0, 0, boardCanvas.width, boardCanvas.height);
+        // 修正 Canvas 尺寸
+        boardCanvas.width = BOARD_WIDTH;
+        boardCanvas.height = BOARD_HEIGHT;
+        piecesCanvas.width = BOARD_WIDTH;
+        piecesCanvas.height = BOARD_HEIGHT;
+
+        boardCtx.clearRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
         boardCtx.strokeStyle = '#6b4b3a';
         boardCtx.lineWidth = 1;
         
-        // 绘制棋盘网格 (9列 x 10行)
+        // 绘制棋盘网格 (9列 x 9行)
         for (let i = 0; i < COLS; i++) {
             boardCtx.beginPath();
             boardCtx.moveTo(PADDING + i * SQUARE_SIZE, PADDING);
@@ -190,23 +202,25 @@
             boardCtx.stroke();
         }
         for (let j = 0; j < ROWS; j++) {
-             boardCtx.beginPath();
-             boardCtx.moveTo(PADDING, PADDING + j * SQUARE_SIZE);
-             boardCtx.lineTo(PADDING + (COLS - 1) * SQUARE_SIZE, PADDING + j * SQUARE_SIZE);
-             boardCtx.stroke();
+            boardCtx.beginPath();
+            boardCtx.moveTo(PADDING, PADDING + j * SQUARE_SIZE);
+            boardCtx.lineTo(PADDING + (COLS - 1) * SQUARE_SIZE, PADDING + j * SQUARE_SIZE);
+            boardCtx.stroke();
         }
         
-        // 绘制楚河汉界
-        boardCtx.clearRect(PADDING, PADDING + 4 * SQUARE_SIZE + 1, (COLS - 1) * SQUARE_SIZE, SQUARE_SIZE - 2);
+        // 绘制楚河汉界（y=3 和 y=4 之间的 1 行空间）
+        const riverY = PADDING + RIVER_Y_MIN * SQUARE_SIZE; // 河界从 y=3 的线开始
+        boardCtx.clearRect(PADDING, riverY + 1, (COLS - 1) * SQUARE_SIZE, 1 * SQUARE_SIZE - 2); // 清除 y=3 和 y=4 之间的区域
+        
         boardCtx.font = '24px KaiTi, STKaiti';
         boardCtx.fillStyle = '#6b4b3a';
         boardCtx.textAlign = 'center';
         boardCtx.textBaseline = 'middle';
-        boardCtx.fillText('楚 河', PADDING + 2 * SQUARE_SIZE, PADDING + 4.5 * SQUARE_SIZE);
-        boardCtx.fillText('汉 界', PADDING + 6 * SQUARE_SIZE, PADDING + 4.5 * SQUARE_SIZE);
+        boardCtx.fillText('楚 河', PADDING + 2 * SQUARE_SIZE, riverY + SQUARE_SIZE/2);
+        boardCtx.fillText('汉 界', PADDING + 6 * SQUARE_SIZE, riverY + SQUARE_SIZE/2);
 
-        // 绘制红方九宫 (y=7 到 y=9)
-        const redPalace = [[7, 3]]; 
+        // 绘制红方九宫 (y=6 到 y=8, 3行)
+        const redPalace = [[RED_PALACE_Y_MIN, 3]]; // [y, x] of top-left corner
         redPalace.forEach(([y, x]) => {
             boardCtx.beginPath();
             boardCtx.moveTo(PADDING + x * SQUARE_SIZE, PADDING + y * SQUARE_SIZE);
@@ -216,19 +230,18 @@
             boardCtx.stroke();
         });
         
-        // 绘制黑方禁区 (x=8 列) 边界线
-        // 绘制黑方禁区 (x=8 列)，仅覆盖黑方半场 (0-4行)
-        const banAreaHeight = 4 * SQUARE_SIZE; // 0, 1, 2, 3, 4 行
+        // 绘制黑方禁区 (x=8 列)，现在仅覆盖黑方自由移动区 (y=0 到 y=2)
+        const banAreaHeight = RIVER_Y_MIN * SQUARE_SIZE; // y=0, 1, 2
         
         boardCtx.strokeStyle = 'red';
         boardCtx.lineWidth = 3;
         boardCtx.beginPath();
-        // 绘制左侧边界线（从 0 行到 4 行底部）
+        // 绘制左侧边界线（从 0 行到 2 行底部）
         boardCtx.moveTo(PADDING + 8 * SQUARE_SIZE - 2, PADDING);
         boardCtx.lineTo(PADDING + 8 * SQUARE_SIZE - 2, PADDING + banAreaHeight);
         boardCtx.stroke();
         
-        // 绘制顶部边界线（只在 x=8 处绘制）
+        // 绘制顶部边界线
         boardCtx.beginPath();
         boardCtx.moveTo(PADDING + 8 * SQUARE_SIZE - 2, PADDING);
         boardCtx.lineTo(PADDING + 9 * SQUARE_SIZE, PADDING);
@@ -404,13 +417,14 @@
         return moves;
     }
 
-    function getElephantMoves(x, y, color) { /* ... (逻辑不变) ... */
+    function getElephantMoves(x, y, color) { 
         let moves = [];
         const directions = [[2, 2], [2, -2], [-2, 2], [-2, -2]];
         directions.forEach(([dx, dy]) => {
             const newX = x + dx, newY = y + dy;
             const eyeX = x + dx / 2, eyeY = y + dy / 2;
-            if (canMoveTo(newX, newY, color) && newY >= 5 && isEmpty(eyeX, eyeY)) {
+            // 红象不能过河，新规则中河界在 y=3 和 y=4，红方区域从 y=5 开始
+            if (canMoveTo(newX, newY, color) && newY >= RIVER_Y_MIN + 2 && isEmpty(eyeX, eyeY)) { // y >= 5
                 moves.push({ x: newX, y: newY });
             }
         });
@@ -503,11 +517,15 @@
         return moves;
     }
 
-    function getRedPawnMoves(x, y, color) { /* ... (逻辑不变) ... */
+    function getRedPawnMoves(x, y, color) { 
         let moves = [];
         const forwardY = y - 1;
+        // 前进
         if (canMoveTo(x, forwardY, color)) moves.push({ x: x, y: forwardY });
-        if (y <= 4) {
+        // 过河后 (y <= 4 是河界，y <= 2 是黑方自由区)
+        // 根据您的定义，红兵跨过 y=5 才是过河，但现在 y=5 是红方第一行
+        // 假定红兵过河线为 y=4（即进入河界）
+        if (y <= RIVER_Y_MIN + 1) { // y <= 4 (红兵进入河界或黑方区域)
             if (canMoveTo(x - 1, y, color)) moves.push({ x: x - 1, y: y });
             if (canMoveTo(x + 1, y, color)) moves.push({ x: x + 1, y: y });
         }
@@ -630,30 +648,39 @@
     function initGame() {
         boardState = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
         
-        // 黑方 (国际象棋, 上半) - 占据 0 到 7 列
-        boardState[0] = ['b_r', 'b_n', 'b_b', 'b_q', 'b_k', 'b_b', 'b_n', 'b_r', null]; // 8x1
-        boardState[1] = Array(8).fill('b_p').concat(null); // 8x1
-        
-        // 红方 (中国象棋, 下半) - 占据 0 到 8 列
-        boardState[9] = ['r_r', 'r_h', 'r_e', 'r_a', 'r_g', 'r_a', 'r_e', 'r_h', 'r_r'];
-        boardState[7] = [null, 'r_c', null, null, null, null, null, 'r_c', null];
-        boardState[6] = ['r_p', null, 'r_p', null, 'r_p', null, 'r_p', null, 'r_p'];
+        // 黑方 (国际象棋, 上半 y=0, 1, 2)
+        // 第一行 (y=0): 车马象后王象马车 + 空
+        boardState[0] = ['b_r', 'b_n', 'b_b', 'b_q', 'b_k', 'b_b', 'b_n', 'b_r', null]; 
+        // 第二行 (y=1): 兵
+        boardState[1] = Array(8).fill('b_p').concat(null); 
+        // y=2 行空着
 
+        // 红方 (中国象棋, 下半 y=5, 6, 7, 8)
+        // 第八行 (y=8): 车马相仕帅仕相马车
+        boardState[8] = ['r_r', 'r_h', 'r_e', 'r_a', 'r_g', 'r_a', 'r_e', 'r_h', 'r_r'];
+        // 第六行 (y=6): 炮
+        boardState[6] = [null, 'r_c', null, null, null, null, null, 'r_c', null];
+        // 第五行 (y=5): 兵
+        boardState[5] = ['r_p', null, 'r_p', null, 'r_p', null, 'r_p', null, 'r_p'];
+
+        // ... (其他变量重置和函数调用保持不变)
         currentPlayer = 'black';
         selectedPiece = null;
         validMoves = [];
         gameStatus = 'ongoing';
-        // 在 initGame() 函数末尾添加：
+        
+        // 重置王车易位状态
         hasKingMoved = { 'black': false, 'red': false };
         hasRookMoved = {
             'b_r_long': false,
             'b_r_short': false,
         };
+        
         updateInfoPanel();
         drawBoard();
         drawPiecesAndHighlights();
     }
-    
+
     function switchPlayer() {
         currentPlayer = (currentPlayer === 'red') ? 'black' : 'red';
         updateInfoPanel();
