@@ -655,9 +655,28 @@
                 boardState[y][x] = selectedPiece.pieceId;
                 boardState[selectedPiece.y][selectedPiece.x] = null;
                 
+                
                 // 黑兵升变
                 if (selectedPiece.pieceId === 'b_p' && y === ROWS - 1) {
-                    boardState[y][x] = 'b_q';
+                    // 弹出选择框，让用户选择升变的棋子：Q (后), R (车), B (象), N (马)
+                    let newPieceId;
+                    let validChoices = ['Q', 'R', 'B', 'N'];
+                    
+                    while (!newPieceId) {
+                        const choice = prompt("黑兵升变：请输入 Q (后), R (车), B (象) 或 N (马)").toUpperCase();
+                        
+                        if (validChoices.includes(choice)) {
+                            switch(choice) {
+                                case 'Q': newPieceId = 'b_q'; break;
+                                case 'R': newPieceId = 'b_r'; break;
+                                case 'B': newPieceId = 'b_b'; break;
+                                case 'N': newPieceId = 'b_n'; break;
+                            }
+                        } else {
+                            alert("输入无效，请重新选择。");
+                        }
+                    }
+                    boardState[y][x] = newPieceId;
                 }
 
                 selectedPiece = null;
