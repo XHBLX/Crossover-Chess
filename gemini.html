@@ -155,6 +155,13 @@
     let selectedPiece = null;
     let validMoves = [];
     let gameStatus = 'ongoing';
+        // --- 状态追踪变量（新增） ---
+    let hasKingMoved = { 'black': false, 'red': false }; // 只需要追踪黑王（b_k）
+    let hasRookMoved = {
+        'b_r_long': false, // 后翼车（x=0, y=0）
+        'b_r_short': false, // 王翼车（x=7, y=0）
+        // 红车无需追踪
+    };
 
     const PIECES = {
         'r_g': { name: '帅', color: 'red' }, 'r_a': { name: '仕', color: 'red' },
@@ -507,22 +514,52 @@
         return moves;
     }
 
-    // 黑方王 (b_k) 的移动逻辑
+    // 黑方王 (b_k) 的移动逻辑 (添加王车易位)
     function getKingMoves(x, y, color) {
         let moves = [];
-        // 允许八向移动
         const directions = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]];
         
+        // 1. 常规八向移动
         directions.forEach(([dx, dy]) => {
             const newX = x + dx, newY = y + dy;
-            
-            // 不再检查红方九宫（红方九宫限制已移除）
             if (canMoveTo(newX, newY, color)) {
                 moves.push({ x: newX, y: newY });
             }
         });
+        
+        // 2. 王车易位 (仅限黑方，且王没有移动过，且王当前不在将军状态)
+        // 注意：当前代码中没有实现将军检查，这里只检查是否有棋子阻挡和是否移动过。
+        if (color === 'black' && !hasKingMoved['black'] && x === 4 && y === 0) { // 假定黑王初始位置为 (4, 0)
 
-        // 不包含王见王吃子逻辑，黑王不能飞将吃红王
+            // **辅助函数：检查路径上是否被攻击（简易版，只检查空位和是否移动）**
+            const isPathClear = (start, end) => {
+                for (let i = start; i <= end; i++) {
+                    if (boardState[y][i]) return false;
+                }
+                return true;
+            }
+            
+            // **短易位 (王翼, O-O):**
+            const shortRookX = 7;
+            if (!hasRookMoved['b_r_short'] && boardState[0][shortRookX] === 'b_r') {
+                // 路径检查：(5, 0) 和 (6, 0) 必须为空
+                if (isEmpty(5, 0) && isEmpty(6, 0)) {
+                    // 忽略攻击检查（需要复杂的isSquareAttacked函数），如果需要，请后续要求添加。
+                    moves.push({ x: 6, y: 0, isCastling: 'short' });
+                }
+            }
+
+            // **长易位 (后翼, O-O-O):**
+            const longRookX = 0;
+            if (!hasRookMoved['b_r_long'] && boardState[0][longRookX] === 'b_r') {
+                // 路径检查：(1, 0), (2, 0) 和 (3, 0) 必须为空
+                if (isEmpty(1, 0) && isEmpty(2, 0) && isEmpty(3, 0)) {
+                    // 忽略攻击检查（需要复杂的isSquareAttacked函数），如果需要，请后续要求添加。
+                    moves.push({ x: 2, y: 0, isCastling: 'long' });
+                }
+            }
+        }
+
         return moves;
     }
 
@@ -606,6 +643,12 @@
         selectedPiece = null;
         validMoves = [];
         gameStatus = 'ongoing';
+        // 在 initGame() 函数末尾添加：
+        hasKingMoved = { 'black': false, 'red': false };
+        hasRookMoved = {
+            'b_r_long': false,
+            'b_r_short': false,
+        };
         updateInfoPanel();
         drawBoard();
         drawPiecesAndHighlights();
@@ -655,6 +698,52 @@
                 boardState[y][x] = selectedPiece.pieceId;
                 boardState[selectedPiece.y][selectedPiece.x] = null;
                 
+                // --- 执行王车易位 (新增) ---
+                if (move.isCastling) {
+                    const rookY = selectedPiece.y; // 应该总是 0
+                    let oldRookX, newRookX;
+
+                    if (move.isCastling === 'short') {
+                        oldRookX = 7;
+                        newRookX = 5;
+                    } else { // long
+                        oldRookX = 0;
+                        newRookX = 3;
+                    }
+                    
+                    // 移动车
+                    boardState[rookY][newRookX] = boardState[rookY][oldRookX];
+                    boardState[rookY][oldRookX] = null;
+
+                    // 移动王（王移动两格）
+                    boardState[y][x] = selectedPiece.pieceId;
+                    boardState[selectedPiece.y][selectedPiece.x] = null;
+
+                    // 标记王和车已移动
+                    hasKingMoved['black'] = true;
+                    if (move.isCastling === 'short') {
+                        hasRookMoved['b_r_short'] = true;
+                    } else {
+                        hasRookMoved['b_r_long'] = true;
+                    }
+                } 
+                // --- 常规移动 ---
+                else { 
+                    // 移动棋子
+                    boardState[y][x] = selectedPiece.pieceId;
+                    boardState[selectedPiece.y][selectedPiece.x] = null;
+                    
+                    // 追踪王车移动状态 (在第 2 步添加的代码)
+                    if (selectedPiece.pieceId === 'b_k') {
+                        hasKingMoved['black'] = true;
+                    } else if (selectedPiece.pieceId === 'b_r') {
+                        if (selectedPiece.x === 0 && selectedPiece.y === 0) {
+                            hasRookMoved['b_r_long'] = true;
+                        } else if (selectedPiece.x === 7 && selectedPiece.y === 0) {
+                            hasRookMoved['b_r_short'] = true;
+                        }
+                    }
+                }
                 
                 // 黑兵升变
                 if (selectedPiece.pieceId === 'b_p' && y === ROWS - 1) {
