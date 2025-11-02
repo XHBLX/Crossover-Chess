@@ -336,15 +336,13 @@
     
     if (x === COLS - 1) { // 检查禁区 (最右列 x=8)
 
-        const isTargetRowInBlackArea = y <= 4; // 黑方半场和河 (y=0 到 y=4)
+        const isTargetRowInBlackArea = y <= 3; // 黑方半场和河 (y=0 到 y=3)
         
-        // 规则：
-        // 1. 黑方棋子在黑方半场和河时，不能进入 x=8 禁区。
+
         if (isTargetRowInBlackArea) {
             return false;
         }
-        // 2. 红方棋子（可以踏入禁区），但如果目标是禁区，则该位置必须为空或敌方棋子（标准canMoveTo的其余逻辑）。
-        // 3. 禁区限制只对移动生效，不影响红方棋子的合法性。
+  
     }
 
     return isEmpty(x, y) || isOpponent(x, y, ownColor);
