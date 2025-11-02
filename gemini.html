@@ -422,7 +422,7 @@
             const newX = x + dx, newY = y + dy;
             const eyeX = x + dx / 2, eyeY = y + dy / 2;
             // 红象不能过河，新规则中河界在 y=3 和 y=4，红方区域从 y=5 开始
-            if (canMoveTo(newX, newY, color) && newY >= RIVER_Y_MIN + 2 && isEmpty(eyeX, eyeY)) { // y >= 5
+            if (canMoveTo(newX, newY, color) && newY >= RIVER_Y_MIN*0-2  + 2 && isEmpty(eyeX, eyeY)) { // y >= 5
                 moves.push({ x: newX, y: newY });
             }
         });
