@@ -231,7 +231,7 @@
         });
         
         // 绘制黑方禁区 (x=8 列)，现在仅覆盖黑方自由移动区 (y=0 到 y=2)
-        const banAreaHeight = RIVER_Y_MIN * SQUARE_SIZE; // y=0, 1, 2
+        const banAreaHeight = (RIVER_Y_MIN-0.5) * SQUARE_SIZE; // y=0, 1, 2
         
         boardCtx.strokeStyle = 'red';
         boardCtx.lineWidth = 3;
@@ -336,7 +336,7 @@
     
     if (x === COLS - 1) { // 检查禁区 (最右列 x=8)
 
-        const isTargetRowInBlackArea = y <= 3; // 黑方半场和河 (y=0 到 y=3)
+        const isTargetRowInBlackArea = y <= 2; // 黑方半场和河 (y=0 到 y=2)
         
 
         if (isTargetRowInBlackArea) {
