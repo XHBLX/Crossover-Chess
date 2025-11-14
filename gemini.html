@@ -353,7 +353,7 @@
     function getGeneralMoves(x, y, color) {
         let moves = [];
         const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
-        const palace = { xMin: 3, xMax: 5, yMin: 7, yMax: 9 };
+        const palace = { xMin: 3, xMax: 5, yMin: RED_PALACE_Y_MIN, yMax: RED_PALACE_Y_MIN+3 };
 
         // 1. 九宫内的常规移动
         directions.forEach(([dx, dy]) => {
@@ -404,7 +404,7 @@
     function getAdvisorMoves(x, y, color) { /* ... (逻辑不变) ... */
         let moves = [];
         const directions = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
-        const palace = { xMin: 3, xMax: 5, yMin: 7, yMax: 9 };
+        const palace = { xMin: 3, xMax: 5, yMin: RED_PALACE_Y_MIN, yMax: RED_PALACE_Y_MIN+3 };
         directions.forEach(([dx, dy]) => {
             const newX = x + dx, newY = y + dy;
             if (newX >= palace.xMin && newX <= palace.xMax && newY >= palace.yMin && newY <= palace.yMax) {
