@@ -524,7 +524,7 @@
         // 过河后 (y <= 4 是河界，y <= 2 是黑方自由区)
         // 根据您的定义，红兵跨过 y=5 才是过河，但现在 y=5 是红方第一行
         // 假定红兵过河线为 y=4（即进入河界）
-        if (y <= RIVER_Y_MIN + 1) { // y <= 4 (红兵进入河界或黑方区域)
+        if (y <= RIVER_Y_MIN ) { // y <= 4 (红兵进入河界或黑方区域)
             if (canMoveTo(x - 1, y, color)) moves.push({ x: x - 1, y: y });
             if (canMoveTo(x + 1, y, color)) moves.push({ x: x + 1, y: y });
         }
